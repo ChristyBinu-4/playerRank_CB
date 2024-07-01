@@ -280,7 +280,8 @@ class Clusterer(BaseEstimator, ClusterMixin):
             y: ignored
         """
         self.kind_ = kind
-        X = dataframe.values
+        # X = dataframe.values
+        X = dataframe[['avg_x', 'avg_y']].values.astype('float32')
 
         self._find_clusters(X)      # find the clusters with kmeans
         if kind != 'single':

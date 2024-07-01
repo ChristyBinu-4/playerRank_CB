@@ -1,8 +1,14 @@
+from sklearn.base import BaseEstimator, ClusterMixin
+import numpy as np
+import skfuzzy
+
+
 from collections import defaultdict, OrderedDict, Counter
 import numpy as np
 from scipy import optimize
 from scipy.stats import gaussian_kde
-from sklearn.base import BaseEstimator, ClusterMixin
+#from utils import *
+from sklearn.base import BaseEstimator
 from sklearn.svm import LinearSVC
 from sklearn.model_selection import cross_val_score
 from sklearn.dummy import DummyClassifier
@@ -12,8 +18,7 @@ from sklearn.feature_selection import RFECV
 from scipy.spatial.distance import euclidean
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.metrics import silhouette_score, silhouette_samples
-# from sklearn.cluster import DBSCAN
-from cuml.cluster import DBSCAN
+from sklearn.cluster import KMeans, MiniBatchKMeans
 from sklearn.base import BaseEstimator, ClusterMixin
 from joblib import Parallel, delayed
 
@@ -21,10 +26,66 @@ from sklearn.metrics.pairwise import pairwise_distances
 from itertools import combinations
 from sklearn.utils import check_random_state
 from sklearn.preprocessing import MinMaxScaler
-import json
+
 
 def scalable_silhouette_score(X, labels, metric='euclidean', sample_size=None,
-                              random_state=None, n_jobs=1, **kwds):
+                           random_state=None, n_jobs=1, **kwds):
+    """
+    Compute the mean Silhouette Coefficient of all samples.
+    The Silhouette Coefficient is compute using the mean intra-cluster distance (a)
+    and the mean nearest-cluster distance (b) for each sample.
+
+    The Silhouette Coefficient for a sample is $(b - a) / max(a, b)$.
+    To clarify, b is the distance between a sample and the nearest cluster
+    that b is not a part of.
+
+    This function returns the mean Silhoeutte Coefficient over all samples.
+    To obtain the values for each sample, it uses silhouette_samples.
+
+    The best value is 1 and the worst value is -1. Values near 0 indicate
+    overlapping clusters. Negative values generally indicate that a sample has
+    been assigned to the wrong cluster, as a different cluster is more similar.
+
+    Parameters
+    ----------
+    X : array [n_samples_a, n_features]
+        the Feature array.
+
+    labels : array, shape = [n_samples]
+        label values for each sample
+
+    metric : string, or callable
+        The metric to use when calculating distance between instances in a
+        feature array. If metric is a string, it must be one of the options
+        allowed by metrics.pairwise.pairwise_distances. If X is the distance
+        array itself, use "precomputed" as the metric.
+
+    sample_size : int or None
+        The size of the sample to use when computing the Silhouette
+        Coefficient. If sample_size is None, no sampling is used.
+
+    random_state : integer or numpy.RandomState, optional
+        The generator used to initialize the centers. If an integer is
+        given, it fixes the seed. Defaults to the global numpy random
+        number generator.
+
+    **kwds : optional keyword parameters
+        Any further parameters are passed directly to the distance function.
+        If using a scipy.spatial.distance metric, the parameters are still
+        metric dependent. See the scipy docs for usage examples.
+
+    Returns
+    -------
+    silhouette : float
+        the Mean Silhouette Coefficient for all samples.
+
+    References
+    ----------
+    Peter J. Rousseeuw (1987). "Silhouettes: a Graphical Aid to the
+        Interpretation and Validation of Cluster Analysis". Computational
+        and Applied Mathematics 20: 53-65. doi:10.1016/0377-0427(87)90125-7.
+    http://en.wikipedia.org/wiki/Silhouette_(clustering)
+    """
     if sample_size is not None:
         random_state = check_random_state(random_state)
         indices = random_state.permutation(X.shape[0])[:sample_size]
@@ -36,13 +97,91 @@ def scalable_silhouette_score(X, labels, metric='euclidean', sample_size=None,
     return np.mean(scalable_silhouette_samples(
         X, labels, metric=metric, n_jobs=n_jobs, **kwds))
 
+
 def scalable_silhouette_samples(X, labels, metric='euclidean', n_jobs=1, **kwds):
-    A = _intra_cluster_distances_block(X, labels, metric, n_jobs=n_jobs, **kwds)
-    B = _nearest_cluster_distance_block(X, labels, metric, n_jobs=n_jobs, **kwds)
+    """
+    Compute the Silhouette Coefficient for each sample. The Silhoeutte Coefficient
+    is a measure of how well samples are clustered with samples that are similar to themselves.
+    Clustering models with a high Silhouette Coefficient are said to be dense,
+    where samples in the same cluster are similar to each other, and well separated,
+    where samples in different clusters are not very similar to each other.
+
+    The Silhouette Coefficient is calculated using the mean intra-cluster
+    distance (a) and the mean nearest-cluster distance (b) for each sample.
+
+    The Silhouette Coefficient for a sample is $(b - a) / max(a, b)$.
+    This function returns the Silhoeutte Coefficient for each sample.
+    The best value is 1 and the worst value is -1. Values near 0 indicate
+    overlapping clusters.
+
+    Parameters
+    ----------
+    X : array [n_samples_a, n_features]
+        Feature array.
+
+    labels : array, shape = [n_samples]
+        label values for each sample
+
+    metric : string, or callable
+        The metric to use when calculating distance between instances in a
+        feature array. If metric is a string, it must be one of the options
+        allowed by metrics.pairwise.pairwise_distances. If X is the distance
+        array itself, use "precomputed" as the metric.
+
+    **kwds : optional keyword parameters
+        Any further parameters are passed directly to the distance function.
+        If using a scipy.spatial.distance metric, the parameters are still
+        metric dependent. See the scipy docs for usage examples.
+
+    Returns
+    -------
+    silhouette : array, shape = [n_samples]
+        Silhouette Coefficient for each samples.
+
+    References
+    ----------
+    Peter J. Rousseeuw (1987). "Silhouettes: a Graphical Aid to the
+        Interpretation and Validation of Cluster Analysis". Computational
+        and Applied Mathematics 20: 53-65. doi:10.1016/0377-0427(87)90125-7.
+    http://en.wikipedia.org/wiki/Silhouette_(clustering)
+    """
+    A = _intra_cluster_distances_block(X, labels, metric, n_jobs=n_jobs,
+                                       **kwds)
+    B = _nearest_cluster_distance_block(X, labels, metric, n_jobs=n_jobs,
+                                        **kwds)
     sil_samples = (B - A) / np.maximum(A, B)
+    # nan values are for clusters of size 1, and should be 0
     return np.nan_to_num(sil_samples)
 
+
 def _intra_cluster_distances_block(X, labels, metric, n_jobs=1, **kwds):
+    """
+    Calculate the mean intra-cluster distance for sample i.
+
+    Parameters
+    ----------
+    X : array [n_samples_a, n_features]
+        Feature array.
+
+    labels : array, shape = [n_samples]
+        label values for each sample
+
+    metric : string, or callable
+        The metric to use when calculating distance between instances in a
+        feature array. If metric is a string, it must be one of the options
+        allowed by metrics.pairwise.pairwise_distances. If X is the distance
+        array itself, use "precomputed" as the metric.
+
+    **kwds : optional keyword parameters
+        Any further parameters are passed directly to the distance function.
+        If using a scipy.spatial.distance metric, the parameters are still
+        metric dependent. See the scipy docs for usage examples.
+
+    Returns
+    -------
+    a : array [n_samples_a]
+        Mean intra-cluster distance
+    """
     intra_dist = np.zeros(labels.size, dtype=float)
     values = Parallel(n_jobs=n_jobs)(
             delayed(_intra_cluster_distances_block_)
@@ -52,26 +191,61 @@ def _intra_cluster_distances_block(X, labels, metric, n_jobs=1, **kwds):
         intra_dist[np.where(labels == label)[0]] = values_
     return intra_dist
 
+
+
 def _nearest_cluster_distance_block(X, labels, metric, n_jobs=1, **kwds):
+    """Calculate the mean nearest-cluster distance for sample i.
+
+    Parameters
+    ----------
+    X : array [n_samples_a, n_features]
+        Feature array.
+
+    labels : array, shape = [n_samples]
+        label values for each sample
+
+    metric : string, or callable
+        The metric to use when calculating distance between instances in a
+        feature array. If metric is a string, it must be one of the options
+        allowed by metrics.pairwise.pairwise_distances. If X is the distance
+        array itself, use "precomputed" as the metric.
+
+    **kwds : optional keyword parameters
+        Any further parameters are passed directly to the distance function.
+        If using a scipy.spatial.distance metric, the parameters are still
+        metric dependent. See the scipy docs for usage examples.
+
+    X : array [n_samples_a, n_features]
+        Feature array.
+
+    Returns
+    -------
+    b : float
+        Mean nearest-cluster distance for sample i
+    """
     inter_dist = np.empty(labels.size, dtype=float)
     inter_dist.fill(np.inf)
+    # Compute cluster distance between pairs of clusters
     unique_labels = np.unique(labels)
 
     values = Parallel(n_jobs=n_jobs)(
-        delayed(_nearest_cluster_distance_block_)(
-            X[np.where(labels == label_a)[0]],
-            X[np.where(labels == label_b)[0]],
-            metric, **kwds)
-        for label_a, label_b in combinations(unique_labels, 2))
+            delayed(_nearest_cluster_distance_block_)(
+                X[np.where(labels == label_a)[0]],
+                X[np.where(labels == label_b)[0]],
+                metric, **kwds)
+                for label_a, label_b in combinations(unique_labels, 2))
 
-    for (label_a, label_b), (values_a, values_b) in zip(combinations(unique_labels, 2), values):
-        indices_a = np.where(labels == label_a)[0]
-        inter_dist[indices_a] = np.minimum(values_a, inter_dist[indices_a])
-        del indices_a
-        indices_b = np.where(labels == label_b)[0]
-        inter_dist[indices_b] = np.minimum(values_b, inter_dist[indices_b])
-        del indices_b
+    for (label_a, label_b), (values_a, values_b) in \
+            zip(combinations(unique_labels, 2), values):
+
+            indices_a = np.where(labels == label_a)[0]
+            inter_dist[indices_a] = np.minimum(values_a, inter_dist[indices_a])
+            del indices_a
+            indices_b = np.where(labels == label_b)[0]
+            inter_dist[indices_b] = np.minimum(values_b, inter_dist[indices_b])
+            del indices_b
     return inter_dist
+
 
 def _intra_cluster_distances_block_(subX, metric, **kwds):
     distances = pairwise_distances(subX, metric=metric, **kwds)
@@ -84,150 +258,86 @@ def _nearest_cluster_distance_block_(subX_a, subX_b, metric, **kwds):
     return dist_a, dist_b
 
 class Clusterer(BaseEstimator, ClusterMixin):
-    """Performance clustering
-
-    Parameters
-    ----------
-    eps_range: tuple (pair)
-        the minimum and the maximum `eps` to try when choosing the best value of `eps`
-        (the one having the best silhouette score)
-
-    min_samples: int
-        The number of samples in a neighborhood for a point to be considered as a core point.
-
-    border_threshold: float
-        the threshold to use for selecting the borderline.
-        It indicates the max silhouette for a borderline point.
-
-    verbose: boolean
-        verbosity mode.
-        default: False
-
-    random_state : int
-        RandomState instance or None, optional, default: None
-        If int, random_state is the seed used by the random number generator;
-        If RandomState instance, random_state is the random number generator;
-        If None, the random number generator is the RandomState instance used
-        by `np.random`.
-
-    sample_size : int
-        the number of samples (rows) that must be used when computing the silhouette score (the function silhouette_score is computationally expensive and generates a Memory Error when the number of samples is too high)
-        default: 10000
-
-    max_rows : int
-        the maximum number of samples (rows) to be considered for the clustering task (the function silhouette_samples is computationally expensive and generates a Memory Error when the input matrix have too many rows)
-        default: 40000
-
-
-    Attributes
-    ----------
-    cluster_centers_ : array, [n_clusters, n_features]
-        Coordinates of cluster centers
-    n_clusters_: int
-        number of clusters found by the algorithm
-    labels_ :
-        Labels of each point
-    eps_range: tuple
-        minimum and maximum `eps` to try
-    min_samples: int
-        the number of samples in a neighborhood for a point to be considered as a core point.
-    verbose: boolean
-        whether or not to show details of the execution
-    random_state: int
-        RandomState instance or None, optional, default: None
-        If int, random_state is the seed used by the random number generator;
-        If RandomState instance, random_state is the random number generator;
-        If None, the random number generator is the RandomState instance used
-        by 'np.random'.
-    sample_size: None
-    dbscan: scikit-learn DBSCAN object
-    """
-
-    def __init__(self, eps_range=(0.1, 5.0), min_samples=5, border_threshold=0.2, verbose=False, random_state=42,
-                 sample_size=None):
-        self.eps_range = eps_range
-        self.min_samples = min_samples
+    def __init__(self, k_range=(2, 15), border_threshold=0.2, verbose=False, random_state=42,
+                 sample_size=None, m=2, max_iter=1000):
+        self.k_range = k_range
         self.border_threshold = border_threshold
         self.verbose = verbose
         self.sample_size = sample_size
-        self.random_state = random_state
         self.labels_ = []
+        self.random_state = random_state
+        self.m = m
+        self.max_iter = max_iter
+        self.cluster_centers_ = None
+        self.n_clusters_ = None
+        self.kind_ = None
+        self._matrix = None
 
     def _find_clusters(self, X, make_plot=True):
         if self.verbose:
-            print('FITTING DBSCAN...\n')
-            print('eps\t|silhouette')
+            print('FITTING Fuzzy C-means...\n')
+            print('n_clust\t|silhouette')
             print('---------------------')
 
-        self.eps2silhouettes_ = {}
-        eps_min, eps_max = self.eps_range
-        best_eps, best_silhouette = 0, 0.0
-        for eps in np.linspace(eps_min, eps_max, num=20):
-
+        self.k2silhouettes_ = {}
+        kmin, kmax = self.k_range
+        range_n_clusters = range(kmin, kmax + 1)
+        best_k, best_silhouette = 0, 0.0
+        for k in range_n_clusters:
             # computation
-            dbscan = DBSCAN(eps=eps, min_samples=self.min_samples, n_jobs=-1)
-            dbscan.fit(X)
-            cluster_labels = dbscan.labels_
+            cntr, u, _, _, _, _, _ = skfuzzy.cmeans(X.T, k, m=self.m, error=0.005, maxiter=self.max_iter, init=None)
+
+            # Calculate cluster labels
+            cluster_labels = np.argmax(u, axis=0)
 
             silhouette = scalable_silhouette_score(X, cluster_labels,
                                                    sample_size=self.sample_size,
                                                    random_state=self.random_state)
             if self.verbose:
-                print(f'{eps:.2f}\t|{round(silhouette, 4)}')
+                print('%s\t|%s' % (k, round(silhouette, 4)))
 
             if silhouette >= best_silhouette:
                 best_silhouette = silhouette
-                best_eps = eps
+                best_k = k
 
-            self.eps2silhouettes_[eps] = silhouette
+            self.k2silhouettes_[k] = silhouette
 
-        self.dbscan_ = DBSCAN(eps=best_eps, min_samples=self.min_samples, n_jobs=-1)
-        self.dbscan_.fit(X)
-        self.labels_ = self.dbscan_.labels_
-        self.n_clusters_ = len(set(self.labels_)) - (1 if -1 in self.labels_ else 0)
+        # Fit Fuzzy C-means with best k
+        cntr, u, _, _, _, _, _ = skfuzzy.cmeans(X.T, best_k, m=self.m, error=0.005, maxiter=self.max_iter, init=None)
+        self.cluster_centers_ = cntr.T
+        self.labels_ = np.argmax(u, axis=0)
+        self.n_clusters_ = best_k
 
         if self.verbose:
-            print(f'Best: eps={best_eps} (silhouette={round(best_silhouette, 4)})\n')
+            print('Best: n_clust=%s (silhouette=%s)\n' % (best_k, round(best_silhouette, 4)))
+
+
 
     def _cluster_borderline(self, X):
         """
         Assign clusters to borderline points, according to the borderline_threshold
-        specified in the constructor.
+        specified in the constructor
         """
         if self.verbose:
-            print('FINDING hybrid centers of performance...\n')
+            print ('FINDING hybrid centers of performance...\n')
 
-        self.labels_ = [[] for _ in range(len(X))]
+        self.labels_ = [[] for i in range(len(X))]
 
-        ss = scalable_silhouette_samples(X, self.dbscan_.labels_)
-        for i, (row, silhouette, cluster_label) in enumerate(zip(X, ss, self.dbscan_.labels_)):
+        ss = scalable_silhouette_samples(X, self.kmeans_.labels_)
+        for i, (row, silhouette, cluster_label) in enumerate(zip(X, ss, self.kmeans_.labels_)):
             if silhouette >= self.border_threshold:
                 self.labels_[i].append(cluster_label)
             else:
-                intra_distances = []
-                inter_distances = []
-                for label in set(self.dbscan_.labels_):
-                    if label == -1:
-                        continue  # skip noise points
-                    cluster_points = X[self.dbscan_.labels_ == label]
-                    intra_distances.append(np.mean([euclidean(row, point) for point in cluster_points]))
+                intra_silhouette = euclidean(row, self.kmeans_.cluster_centers_[cluster_label])
+                for label in set(self.kmeans_.labels_):
+                    inter_silhouette = euclidean(row, self.kmeans_.cluster_centers_[label])
+                    silhouette = (inter_silhouette - intra_silhouette) / max(inter_silhouette, intra_silhouette)
+                    if silhouette <= self.border_threshold:
+                        self.labels_[i].append(label)
 
-                for label in set(self.dbscan_.labels_):
-                    if label == -1 or label == cluster_label:
-                        continue  # skip noise points and the same cluster
-                    cluster_points = X[self.dbscan_.labels_ == label]
-                    inter_distances.append(np.mean([euclidean(row, point) for point in cluster_points]))
-
-                intra_silhouette = np.min(intra_distances) if intra_distances else float('inf')
-                inter_silhouette = np.min(inter_distances) if inter_distances else float('inf')
-                
-                silhouette = (inter_silhouette - intra_silhouette) / max(inter_silhouette, intra_silhouette)
-                if silhouette <= self.border_threshold:
-                    nearest_cluster_label = np.argmin(inter_distances)
-                    self.labels_[i].append(nearest_cluster_label)
-
-            return ss
+        return ss
     
+
 
     def _generate_matrix(self, ss, kind = 'multi'):
         """
@@ -248,6 +358,17 @@ class Clusterer(BaseEstimator, ClusterMixin):
                 matrix[tuple(row)] = labels
         self._matrix = matrix
 
+
+
+    def fit(self, X, y=None, kind='single', filename='clusters'):
+        self.kind_ = kind
+        self._find_clusters(X)
+        self._generate_matrix(None if kind == 'single' else self._cluster_borderline(X), kind=kind)
+        if self.verbose:
+            print("DONE.")
+        return self
+
+
     def get_clusters_matrix(self, kind = 'single'):
         roles_matrix = {}
         m= self._matrix.items()
@@ -264,40 +385,7 @@ class Clusterer(BaseEstimator, ClusterMixin):
             roles_matrix[x][y] = "-".join(map(str,v)) if kind !='single' else int(v) #casting with python int, otherwise it's not json serializable
         return roles_matrix
 
-    def fit(self, player_ids, match_ids, dataframe, y=None, kind='single', filename='clusters'):
-        """
-        Compute performance clustering.
 
-        Parameters
-        ----------
-            X : array-like or sparse matrix, shape=(n_samples, n_features)
-            Training instances to cluster.
-
-            kind: str
-                single: single cluster
-                multi: multi cluster
-
-            y: ignored
-        """
-        self.kind_ = kind
-        # X = dataframe.values
-        X = dataframe[['avg_x', 'avg_y']].values.astype('float32')
-
-        self._find_clusters(X)      # find the clusters with kmeans
-        if kind != 'single':
-
-
-            silhouette_scores = self._cluster_borderline(X) # assign multiclusters to borderline performances
-            self._generate_matrix(silhouette_scores)    # generate the matrix for optimizing the predict function
-        else:
-            self._generate_matrix(None, kind = 'single') #no silhouette scores if kind single
-        if self.verbose:
-            print ("DONE.")
-
-
-
-
-        return self
 
     def _predict_with_silhouette(self, X, ss):
         cluster_labels, threshold = self.kmeans_.predict(X), self.border_threshold
@@ -317,25 +405,10 @@ class Clusterer(BaseEstimator, ClusterMixin):
 
         return np.array(multicluster_labels)
 
+
     def predict(self, X, y=None):
-        """
-        Predict the closest cluster each sample in X belongs to.
-        In the vector quantization literature, `cluster_centers_` is called
-        the code book and each value returned by `predict` is the index of
-        the closest code in the code book.
-
-        Parameters
-        ----------
-        X : {array-like, sparse matrix}, shape = [n_samples, n_features]
-            New data to predict.
-
-        Returns
-        -------
-        multi_labels : array, shape [n_samples,]
-            Index of the cluster each sample belongs to.
-        """
         if self.kind_ == 'single':
-            return self.kmeans_predict(X)
+            return np.argmax(skfuzzy.cmeans_predict(X.T, self.cluster_centers_.T, m=self.m)[0], axis=0)
         else:
             multi_labels = []
             for row in X:
@@ -344,4 +417,4 @@ class Clusterer(BaseEstimator, ClusterMixin):
                 multi_labels.append(labels)
             return multi_labels
 
-
+    # Other methods (e.g., _cluster_borderline, _generate_matrix, get_clusters_matrix, etc.) remain unchanged.

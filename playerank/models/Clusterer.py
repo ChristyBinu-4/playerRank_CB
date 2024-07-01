@@ -273,43 +273,30 @@ class Clusterer(BaseEstimator, ClusterMixin):
         self.kind_ = None
         self._matrix = None
 
-    def _find_clusters(self, X, make_plot=True):
-        if self.verbose:
-            print('FITTING Fuzzy C-means...\n')
-            print('n_clust\t|silhouette')
-            print('---------------------')
+    def _find_clusters(self, X):
+            kmin, kmax = self.k_range
+            range_n_clusters = range(kmin, kmax + 1)
+            best_k, best_silhouette = 0, 0.0
 
-        self.k2silhouettes_ = {}
-        kmin, kmax = self.k_range
-        range_n_clusters = range(kmin, kmax + 1)
-        best_k, best_silhouette = 0, 0.0
-        for k in range_n_clusters:
-            # computation
-            cntr, u, _, _, _, _, _ = skfuzzy.cmeans(X.T, k, m=self.m, error=0.005, maxiter=self.max_iter, init=None)
+            for k in range_n_clusters:
+                cntr, u, _, _, _, _, _ = skfuzzy.cmeans(X.T, k, m=2, error=0.005, maxiter=1000, init=None)
+                cluster_labels = np.argmax(u, axis=0)
+                
+                # Compute silhouette or other clustering evaluation metrics
+                silhouette = 0.0  # Implement silhouette calculation here
+                
+                if silhouette >= best_silhouette:
+                    best_silhouette = silhouette
+                    best_k = k
 
-            # Calculate cluster labels
-            cluster_labels = np.argmax(u, axis=0)
+            # Implement storing best clustering results in class attributes
 
-            silhouette = scalable_silhouette_score(X, cluster_labels,
-                                                   sample_size=self.sample_size,
-                                                   random_state=self.random_state)
             if self.verbose:
-                print('%s\t|%s' % (k, round(silhouette, 4)))
+                print(f"Best k: {best_k}, Best silhouette: {best_silhouette}")
 
-            if silhouette >= best_silhouette:
-                best_silhouette = silhouette
-                best_k = k
+            # Store necessary attributes like cluster centers, labels, etc.
 
-            self.k2silhouettes_[k] = silhouette
-
-        # Fit Fuzzy C-means with best k
-        cntr, u, _, _, _, _, _ = skfuzzy.cmeans(X.T, best_k, m=self.m, error=0.005, maxiter=self.max_iter, init=None)
-        self.cluster_centers_ = cntr.T
-        self.labels_ = np.argmax(u, axis=0)
-        self.n_clusters_ = best_k
-
-        if self.verbose:
-            print('Best: n_clust=%s (silhouette=%s)\n' % (best_k, round(best_silhouette, 4)))
+            return self
 
 
 

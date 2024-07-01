@@ -12,7 +12,8 @@ from sklearn.feature_selection import RFECV
 from scipy.spatial.distance import euclidean
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.metrics import silhouette_score, silhouette_samples
-from sklearn.cluster import DBSCAN
+# from sklearn.cluster import DBSCAN
+from cuml.cluster import DBSCAN
 from sklearn.base import BaseEstimator, ClusterMixin
 from joblib import Parallel, delayed
 

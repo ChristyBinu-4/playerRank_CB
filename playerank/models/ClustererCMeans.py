@@ -59,7 +59,15 @@ class Clusterer(BaseEstimator, ClusterMixin):
 
             self.k2silhouettes_[k] = silhouette
 
-        
+
+        center, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(
+                X.T,
+                best_k,
+                2,
+                error=0.005,
+                maxiter=1000, 
+                init=None
+            )        
         self.n_clusters_ = best_k
         self.cluster_centers_ = center
 

@@ -60,7 +60,7 @@ class Clusterer(BaseEstimator, ClusterMixin):
             self.k2silhouettes_[k] = silhouette
 
 
-        center, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(
+        best_center, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(
                 X.T,
                 best_k,
                 2,
@@ -69,7 +69,8 @@ class Clusterer(BaseEstimator, ClusterMixin):
                 init=None
             )        
         self.n_clusters_ = best_k
-        self.cluster_centers_ = center
+        print(best_center, best_k, "CB")
+        self.cluster_centers_ = best_center
 
         if self.verbose:
             print ('Best: n_clust=%s (silhouette=%s)\n' % (best_k, round(best_silhouette, 4)))
@@ -177,6 +178,7 @@ class Clusterer(BaseEstimator, ClusterMixin):
         X = pd.DataFrame(X)
         X = X.values
         if self.kind_ == 'single':
+            print(self.cluster_centers_, 'CB')
             u, u0, d, jm, p, fpc = fuzz.cluster.cmeans_predict(X.T, self.cluster_centers_, 2, error=0.005, maxiter=1000)
             cluster_membership = np.argmax(u, axis=0)
             return cluster_membership

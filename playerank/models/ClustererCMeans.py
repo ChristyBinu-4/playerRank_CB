@@ -105,7 +105,7 @@ class Clusterer(BaseEstimator, ClusterMixin):
             for row, labels in zip(X, multi_labels):
                 matrix[tuple(row)] = labels
         else:
-            for row, labels in zip(X, self.kmeans_.predict(X)):
+            for row, labels in zip(X, self.predict(X)):
                 matrix[tuple(row)] = labels
         self._matrix = matrix
 
@@ -126,31 +126,18 @@ class Clusterer(BaseEstimator, ClusterMixin):
         return roles_matrix
 
     def fit(self, player_ids, match_ids, dataframe, y=None, kind='single', filename='clusters'):
-        """
-        Compute performance clustering.
-
-        Parameters
-        ----------
-            X : array-like or sparse matrix, shape=(n_samples, n_features)
-            Training instances to cluster.
-
-            kind: str
-                single: single cluster
-                multi: multi cluster
-
-            y: ignored
-        """
+        
         self.kind_ = kind
         X = dataframe.values
 
         self._find_clusters(X)      # find the clusters with kmeans
-        # if kind != 'single':
+        if kind != 'single':
 
 
-        #     silhouette_scores = self._cluster_borderline(X) # assign multiclusters to borderline performances
-        #     self._generate_matrix(silhouette_scores)    # generate the matrix for optimizing the predict function
-        # else:
-        #     self._generate_matrix(None, kind = 'single') #no silhouette scores if kind single
+            silhouette_scores = self._cluster_borderline(X) # assign multiclusters to borderline performances
+            self._generate_matrix(silhouette_scores)    # generate the matrix for optimizing the predict function
+        else:
+            self._generate_matrix(None, kind = 'single') #no silhouette scores if kind single
         if self.verbose:
             print ("DONE.")
 
@@ -178,22 +165,9 @@ class Clusterer(BaseEstimator, ClusterMixin):
         return np.array(multicluster_labels)
 
     def predict(self, X, y=None):
-        """
-        Predict the closest cluster each sample in X belongs to.
-        In the vector quantization literature, `cluster_centers_` is called
-        the code book and each value returned by `predict` is the index of
-        the closest code in the code book.
-
-        Parameters
-        ----------
-        X : {array-like, sparse matrix}, shape = [n_samples, n_features]
-            New data to predict.
-
-        Returns
-        -------
-        multi_labels : array, shape [n_samples,]
-            Index of the cluster each sample belongs to.
-        """
+        
         if self.kind_ == 'single':
-            return self.kmeans_predict(X)
+            u, u0, d, jm, p, fpc = fuzz.cluster.cmeans_predict(X.T, self.cluster_centers_, 2, error=0.005, maxiter=1000)
+            cluster_membership = np.argmax(u, axis=0)
+            return cluster_membership
         

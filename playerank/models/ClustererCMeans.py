@@ -1,5 +1,6 @@
 from sklearn.base import BaseEstimator, ClusterMixin
 import numpy as np
+import pandas as pd
 import skfuzzy as fuzz
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import euclidean
@@ -165,7 +166,8 @@ class Clusterer(BaseEstimator, ClusterMixin):
         return np.array(multicluster_labels)
 
     def predict(self, X, y=None):
-        
+        X = pd.DataFrame(X)
+        X = X.values
         if self.kind_ == 'single':
             u, u0, d, jm, p, fpc = fuzz.cluster.cmeans_predict(X, self.cluster_centers_, 2, error=0.005, maxiter=1000)
             cluster_membership = np.argmax(u, axis=0)

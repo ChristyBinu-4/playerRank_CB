@@ -94,16 +94,18 @@ class Weighter(BaseEstimator):
         self.feature_names_ = dataframe.loc[:, dataframe.columns != target].columns
         self.clf_ = LinearSVC(fit_intercept=True, dual = False,  max_iter = 50000,random_state=self.random_state_)
 
-        #f1_score = np.mean(cross_val_score(self.clf_, X, y, cv=2, scoring='f1_weighted'))
-        #self.f1_score_ = f1_score
+        f1_score = np.mean(cross_val_score(self.clf_, X, y, cv=2, scoring='f1_weighted'))
+        self.f1_score_ = f1_score
 
         self.clf_.fit(X, y)
+        print(X, y, "CB:this is x and y")
 
         outcome = 0
         if self.label_type_ == 'w-d-l':
             outcome = 1
 
         importances = self.clf_.coef_[outcome]
+        print(importances, "CB: this is importances")
 
         sum_importances = sum(np.abs(importances))
         self.weights_ = importances / sum_importances

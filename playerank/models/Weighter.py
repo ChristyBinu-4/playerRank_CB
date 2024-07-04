@@ -98,14 +98,12 @@ class Weighter(BaseEstimator):
         self.f1_score_ = f1_score
 
         self.clf_.fit(X, y)
-        print(X, y, "CB:this is x and y")
 
         outcome = 0
         if self.label_type_ == 'w-d-l':
             outcome = 1
 
         importances = self.clf_.coef_[outcome]
-        print(importances, "CB: this is importances")
 
         sum_importances = sum(np.abs(importances))
         self.weights_ = importances / sum_importances

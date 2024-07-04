@@ -66,11 +66,7 @@ class qualityFeatures(Feature):
             data = json.load(open(file))
             if select:
                 data = list(filter(select,data))
-            for x in data:
-                if x['matchPeriod'] not in ['1H', '2H']:
-                    print("CB: this is filter out", x['matchPeriod'])
-                
-            events += list(filter(lambda x: x['matchPeriod'] in ['1H','2H', 'E1', 'E2'] and x['playerId'] not in  goalkeepers_ids,data)) #excluding penalties events
+            events += list(filter(lambda x: x['matchPeriod'] in ['1H','2H'] and x['playerId'] not in  goalkeepers_ids,data)) #excluding penalties events and extra time events 'E1', 'E2', 'P'
             print ("[qualityFeatures] added %s events from %s"%(len(data), file))
         
 

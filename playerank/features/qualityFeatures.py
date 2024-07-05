@@ -69,7 +69,7 @@ class qualityFeatures(Feature):
             events += list(filter(lambda x: x['matchPeriod'] in ['1H','2H'] and x['playerId'] not in  goalkeepers_ids,data)) #excluding penalties events and extra time events 'E1', 'E2', 'P'
             print ("[qualityFeatures] added %s events from %s"%(len(data), file))
         
-        print(events, "CB: this is events")
+        print(len(events), "CB: this is events")
 
         for evt in events:
             if evt['eventId'] in event2subevent2outcome:

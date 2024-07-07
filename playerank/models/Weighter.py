@@ -77,12 +77,7 @@ class Weighter(BaseEstimator):
         sel = VarianceThreshold(var_threshold)
         X = sel.fit_transform(dataframe)
 
-        print(feature_names[0], list(sel.variances_)[0])
-        retained_features = dataframe.columns[sel.get_support(indices=True)]
         selected_feature_names = [feature_names[i] for i, var in enumerate(list(sel.variances_)) if var > var_threshold]
-
-        if(selected_feature_names == retained_features):
-            print("CB these two are identical")
         print ("[Weighter] filtered features:", [(feature_names[i],var) for i, var in enumerate(list(sel.variances_)) if var <= var_threshold])
         dataframe = pd.DataFrame(X, columns=selected_feature_names)
         if self.label_type_ == 'w-dl':
@@ -91,6 +86,8 @@ class Weighter(BaseEstimator):
             y = dataframe[target].apply(lambda x: 1 if x >= 0 else -1 )
         else:
             y = dataframe[target].apply(lambda x: 1 if x > 0 else 0 if x==0 else 2)
+
+        print(y)
         X = dataframe.loc[:, dataframe.columns != target].values
         y = y.values
 

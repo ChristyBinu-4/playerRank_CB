@@ -3,6 +3,7 @@ from .wyscoutEventsDefinition import *
 import json
 import pandas as pd
 from collections import defaultdict
+import pprint
 
 class relativeAggregation(Aggregation):
     """
@@ -35,7 +36,7 @@ class relativeAggregation(Aggregation):
         for collection in self.collections:
             featdata+=collection
             print ("[relativeAggregation] added %s features"%len(collection))
-        print("CB: printing feat_data length", len(featdata))
+
         #selecting teamA e teamB as teams[0] and team[1]
         aggregated = defaultdict(lambda : defaultdict(lambda: defaultdict(int)))
         #format of aggregation: match,team,feature,valueTeam-valueOppositor
@@ -71,9 +72,12 @@ class relativeAggregation(Aggregation):
 
                 featlist["%s-%s"%(data['match'],data['entity'])].update({data['name']:data['value']})
             print ("[relativeAggregation] matches aggregated: %s"%len(featlist.keys()))
-
+            
+            featlistKeys = featlist.keys()
+            pprint.pprint(featlist[featlistKeys[0]])
             df=pd.DataFrame(list(featlist.values())).fillna(0)
 
             return df
+
         else:
             return result

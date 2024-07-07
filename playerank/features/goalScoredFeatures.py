@@ -38,6 +38,5 @@ class goalScoredFeatures(Feature):
                     document['feature'] = 'goal-scored'
                     document['value'] = match['teamsData'][team]['score']
                     result.append(document)
-        pprint.pprint(result[0])
 
         return result

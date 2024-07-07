@@ -75,8 +75,8 @@ class Weighter(BaseEstimator):
         feature_names = list(dataframe.columns)
         # normalize the data and then eliminate the variables with zero variance
         sel = VarianceThreshold(var_threshold)
-        print(dataframe)
         X = sel.fit_transform(dataframe)
+        
         print(feature_names[0], list(sel.variances_)[0])
         retained_features = X.columns[sel.get_support(indices=True)]
         selected_feature_names = [feature_names[i] for i, var in enumerate(list(sel.variances_)) if var > var_threshold]

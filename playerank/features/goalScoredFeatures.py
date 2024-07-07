@@ -28,7 +28,7 @@ class goalScoredFeatures(Feature):
         if select:
             matches = filter(select,matches)
         result =[]
-        pprint.pprint(matches[0])
+        pprint.pprint(matches[2])
 
         for match in matches:
             if 'teamsData' in match:

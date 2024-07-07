@@ -28,8 +28,7 @@ class goalScoredFeatures(Feature):
         if select:
             matches = filter(select,matches)
         result =[]
-        pprint.pprint(matches[2])
-
+    
         for match in matches:
             if 'teamsData' in match:
                 for team in match['teamsData']:
@@ -39,6 +38,6 @@ class goalScoredFeatures(Feature):
                     document['feature'] = 'goal-scored'
                     document['value'] = match['teamsData'][team]['score']
                     result.append(document)
-
+        pprint.pprint(result[0])
 
         return result

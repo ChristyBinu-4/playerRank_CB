@@ -3,6 +3,7 @@ from .wyscoutEventsDefinition import *
 import json
 from collections import defaultdict
 import glob
+import pandas as pd 
 
 
 class qualityFeatures(Feature):
@@ -69,7 +70,6 @@ class qualityFeatures(Feature):
             events += list(filter(lambda x: x['matchPeriod'] in ['1H','2H'] and x['playerId'] not in  goalkeepers_ids,data)) #excluding penalties events and extra time events 'E1', 'E2', 'P'
             print ("[qualityFeatures] added %s events from %s"%(len(data), file))
         
-        print(events[0], "CB: this is events")
 
         for evt in events:
             if evt['eventId'] in event2subevent2outcome:
@@ -97,6 +97,8 @@ class qualityFeatures(Feature):
 
                 else:
                     aggregated_features[evt['matchId']][ent]["%s"%(evtName)]+=1
+
+        print(aggregated_features[2565548])
         result =[]
         for match in aggregated_features:
             for entity in aggregated_features[match]:

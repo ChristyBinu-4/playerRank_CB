@@ -3,6 +3,7 @@ from .wyscoutEventsDefinition import *
 import json
 from collections import defaultdict
 import glob
+import pprint
 
 
 class goalScoredFeatures(Feature):
@@ -27,6 +28,7 @@ class goalScoredFeatures(Feature):
         if select:
             matches = filter(select,matches)
         result =[]
+        pprint.pprint(matches[0])
 
         for match in matches:
             if 'teamsData' in match:

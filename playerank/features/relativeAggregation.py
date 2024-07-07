@@ -74,7 +74,7 @@ class relativeAggregation(Aggregation):
             print ("[relativeAggregation] matches aggregated: %s"%len(featlist.keys()))
             
             featlistKeys = featlist.keys()
-            pprint.pprint(featlist[featlistKeys[0]])
+            pprint.pprint(featlistKeys[0])
             df=pd.DataFrame(list(featlist.values())).fillna(0)
 
             return df

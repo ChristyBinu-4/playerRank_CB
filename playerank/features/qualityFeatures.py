@@ -99,7 +99,6 @@ class qualityFeatures(Feature):
                 else:
                     aggregated_features[evt['matchId']][ent]["%s"%(evtName)]+=1
 
-        pprint.pprint(dict(aggregated_features[2565548]))
         result =[]
         for match in aggregated_features:
             for entity in aggregated_features[match]:

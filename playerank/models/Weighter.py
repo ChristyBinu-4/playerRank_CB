@@ -75,7 +75,9 @@ class Weighter(BaseEstimator):
         feature_names = list(dataframe.columns)
         # normalize the data and then eliminate the variables with zero variance
         sel = VarianceThreshold(var_threshold)
+        print(dataframe)
         X = sel.fit_transform(dataframe)
+        print(X)
         selected_feature_names = [feature_names[i] for i, var in enumerate(list(sel.variances_)) if var > var_threshold]
         print ("[Weighter] filtered features:", [(feature_names[i],var) for i, var in enumerate(list(sel.variances_)) if var <= var_threshold])
         dataframe = pd.DataFrame(X, columns=selected_feature_names)
@@ -92,7 +94,7 @@ class Weighter(BaseEstimator):
             X = StandardScaler().fit_transform(X)
 
         self.feature_names_ = dataframe.loc[:, dataframe.columns != target].columns
-        self.clf_ = LinearSVC(fit_intercept=True, dual = False,  max_iter = 50000,random_state=self.random_state_)
+        self.clf_ = LinearSVC(fit_intercept=True, dual = False,  max_iter = 100000,random_state=self.random_state_)
 
         f1_score = np.mean(cross_val_score(self.clf_, X, y, cv=2, scoring='f1_weighted'))
         self.f1_score_ = f1_score

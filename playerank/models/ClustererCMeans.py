@@ -178,7 +178,6 @@ class Clusterer(BaseEstimator, ClusterMixin):
         X = pd.DataFrame(X)
         X = X.values
         if self.kind_ == 'single':
-            print(self.cluster_centers_, 'CB')
             u, u0, d, jm, p, fpc = fuzz.cluster.cmeans_predict(X.T, self.cluster_centers_, 2, error=0.005, maxiter=1000)
             cluster_membership = np.argmax(u, axis=0)
             return cluster_membership

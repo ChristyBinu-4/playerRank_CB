@@ -72,9 +72,6 @@ class relativeAggregation(Aggregation):
 
                 featlist["%s-%s"%(data['match'],data['entity'])].update({data['name']:data['value']})
             print ("[relativeAggregation] matches aggregated: %s"%len(featlist.keys()))
-            
-            featlistKeys = list(featlist.keys())
-            pprint.pprint(featlist[featlistKeys[0]])
             df=pd.DataFrame(list(featlist.values())).fillna(0)
 
             return df

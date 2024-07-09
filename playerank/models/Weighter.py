@@ -87,7 +87,6 @@ class Weighter(BaseEstimator):
         else:
             y = dataframe[target].apply(lambda x: 1 if x > 0 else 0 if x==0 else 2)
 
-        print(y)
         X = dataframe.loc[:, dataframe.columns != target].values
         y = y.values
 
@@ -105,6 +104,8 @@ class Weighter(BaseEstimator):
         outcome = 0
         if self.label_type_ == 'w-d-l':
             outcome = 1
+
+        print(self.clf_.coef_)
 
         importances = self.clf_.coef_[outcome]
 

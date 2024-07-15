@@ -94,6 +94,9 @@ class Weighter(BaseEstimator):
         X = dataframe.loc[:, dataframe.columns != target].values
         y = y.values
 
+        self.X = X
+        self.y = y
+
         if scaled:
             X = StandardScaler().fit_transform(X)
 
@@ -128,7 +131,9 @@ class Weighter(BaseEstimator):
     def get_feature_names(self):
         return self.feature_names_
     
-    def plot_graph(self, X, y):
+    def plot_graph(self):
+        X = self.X
+        y = self.y
         # Using PCA to reduce the data to 2D
         pca = PCA(n_components=2)
         X_reduced = pca.fit_transform(X)

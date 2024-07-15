@@ -11,7 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-class Weighter(BaseEstimator):
+class Weighter_LR(BaseEstimator):
     def __init__(self, label_type='w-dl', random_state=42):
         self.label_type_ = label_type
         self.random_state_ = random_state

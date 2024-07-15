@@ -108,9 +108,7 @@ class Weighter(BaseEstimator):
         if self.label_type_ == 'w-d-l':
             outcome = 1
 
-        importances = self.clf_.coef_[outcome]
-
-        self.plot_graph(X, y)
+        importances = self.clf_.coef_[outcome]  
 
         sum_importances = sum(np.abs(importances))
         self.weights_ = importances / sum_importances

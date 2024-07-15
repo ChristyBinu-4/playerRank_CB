@@ -6,6 +6,7 @@ from sklearn.model_selection import cross_val_score
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.utils import check_random_state
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.decomposition import PCA
 from sklearn.feature_selection import VarianceThreshold
 import json
 import pandas as pd
@@ -128,8 +129,16 @@ class Weighter(BaseEstimator):
         return self.feature_names_
     
     def plot_graph(self, X, y):
+        # Using PCA to reduce the data to 2D
+        pca = PCA(n_components=2)
+        X_reduced = pca.fit_transform(X)
+        
+        # Fitting SVM on reduced data
+        clf_reduced = LinearSVC(fit_intercept=True, dual=False, max_iter=100000, random_state=self.random_state_)
+        clf_reduced.fit(X_reduced, y)
+
         # Plotting the data points
-        plt.scatter(X[:, 0], X[:, 1], c=y, cmap='winter')
+        plt.scatter(X_reduced[:, 0], X_reduced[:, 1], c=y, cmap='winter', marker='o')
 
         # Plotting the decision boundary
         ax = plt.gca()
@@ -137,12 +146,26 @@ class Weighter(BaseEstimator):
         ylim = ax.get_ylim()
 
         xx, yy = np.meshgrid(np.linspace(xlim[0], xlim[1], 30), np.linspace(ylim[0], ylim[1], 30))
-        Z = self.clf_.decision_function(np.c_[xx.ravel(), yy.ravel()])
+        Z = clf_reduced.decision_function(np.c_[xx.ravel(), yy.ravel()])
         Z = Z.reshape(xx.shape)
 
         ax.contour(xx, yy, Z, colors='k', levels=[0], alpha=0.5, linestyles=['-'])
-        plt.xlabel('Feature 1')
-        plt.ylabel('Feature 2')
-        plt.title('Linear SVC Decision Boundary')
-        plt.show()    
 
+        # Plotting the weight vector
+        coef = clf_reduced.coef_[0]
+        intercept = clf_reduced.intercept_[0]
+        def decision_boundary(x):
+            return -(coef[0] * x + intercept) / coef[1]
+        
+        x_vals = np.array(ax.get_xlim())
+        y_vals = decision_boundary(x_vals)
+        plt.plot(x_vals, y_vals, 'k-')
+
+        # Plotting the weight vector as an arrow
+        origin = np.array([0, 0])
+        plt.quiver(*origin, coef[0], coef[1], scale=5, color='r', width=0.005)
+
+        plt.xlabel('Principal Component 1')
+        plt.ylabel('Principal Component 2')
+        plt.title('Linear SVC Decision Boundary and Weight Vector in Reduced 2D Space')
+        plt.show()

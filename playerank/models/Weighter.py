@@ -11,6 +11,9 @@ import json
 import pandas as pd
 import numpy as np
 
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 class Weighter(BaseEstimator):
     """Automatic weighting of performance features
 
@@ -105,13 +108,12 @@ class Weighter(BaseEstimator):
         if self.label_type_ == 'w-d-l':
             outcome = 1
 
-
         importances = self.clf_.coef_[outcome]
+
+        self.plot_graph(X, y)
 
         sum_importances = sum(np.abs(importances))
         self.weights_ = importances / sum_importances
-
-        print(self.weights_)
 
         ## Save the computed weights into a json file
         features_and_weights = {}
@@ -126,3 +128,23 @@ class Weighter(BaseEstimator):
 
     def get_feature_names(self):
         return self.feature_names_
+    
+    def plot_graph(self, X, y):
+        # Plotting the data points
+        plt.scatter(X[:, 0], X[:, 1], c=y, cmap='winter')
+
+        # Plotting the decision boundary
+        ax = plt.gca()
+        xlim = ax.get_xlim()
+        ylim = ax.get_ylim()
+
+        xx, yy = np.meshgrid(np.linspace(xlim[0], xlim[1], 30), np.linspace(ylim[0], ylim[1], 30))
+        Z = self.clf_.decision_function(np.c_[xx.ravel(), yy.ravel()])
+        Z = Z.reshape(xx.shape)
+
+        ax.contour(xx, yy, Z, colors='k', levels=[0], alpha=0.5, linestyles=['-'])
+        plt.xlabel('Feature 1')
+        plt.ylabel('Feature 2')
+        plt.title('Linear SVC Decision Boundary')
+        plt.show()    
+

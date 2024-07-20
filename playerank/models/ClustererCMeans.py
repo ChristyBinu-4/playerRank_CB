@@ -41,7 +41,7 @@ class Clusterer(BaseEstimator, ClusterMixin):
                 k,
                 2,
                 error=0.005,
-                maxiter=1000, 
+                maxiter=100000, 
                 init=None
             )
             
@@ -65,11 +65,10 @@ class Clusterer(BaseEstimator, ClusterMixin):
                 best_k,
                 2,
                 error=0.005,
-                maxiter=1000, 
+                maxiter=100000, 
                 init=None
             )        
         self.n_clusters_ = best_k
-        print(best_center, best_k, "CB")
         self.cluster_centers_ = best_center
 
         if self.verbose:

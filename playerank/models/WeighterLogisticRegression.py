@@ -44,7 +44,7 @@ class Weighter_LR(BaseEstimator):
         self.clf_ = LogisticRegression(max_iter=10000, random_state=self.random_state_, class_weight='balanced')
 
         f1_score = np.mean(cross_val_score(self.clf_, X, y, cv=2, scoring='f1_weighted'))
-        self.f1_score_ = f1_score
+        self.f1_score = f1_score
 
         self.clf_.fit(X, y)
 

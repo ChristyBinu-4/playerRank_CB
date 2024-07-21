@@ -13,7 +13,7 @@ def calculate_silhouette_score(data, cluster_membership):
 
 class Clusterer(BaseEstimator, ClusterMixin):
     
-    def __init__(self, k_range=(2, 15), border_threshold=0.2, verbose=False, random_state=42,
+    def __init__(self, k_range=(2, 15), border_threshold=0.1, verbose=False, random_state=42,
                 sample_size=None):
         self.k_range = k_range
         self.border_threshold = border_threshold

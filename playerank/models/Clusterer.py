@@ -14,6 +14,9 @@ from sklearn.feature_selection import RFECV
 from scipy.spatial.distance import euclidean
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.metrics import silhouette_score, silhouette_samples
+from sklearn.metrics import davies_bouldin_score, calinski_harabasz_score
+from sklearn.metrics import mutual_info_score, adjusted_rand_score
+
 from sklearn.cluster import KMeans, MiniBatchKMeans
 from sklearn.base import BaseEstimator, ClusterMixin
 from joblib import Parallel, delayed
@@ -89,7 +92,18 @@ def scalable_silhouette_score(X, labels, metric='euclidean', sample_size=None,
             raise ValueError('Distance matrix cannot be precomputed')
         else:
             X, labels = X[indices], labels[indices]
+    silhouette_avg = silhouette_score(X, labels)
+    davies_bouldin_metric = davies_bouldin_score(X, labels)
+    calinski_harabasz_metric = calinski_harabasz_score(X, labels)
+    mutual_info_metric = mutual_info_score(X, labels)
+    adjusted_rand_metric = adjusted_rand_score(X, labels)
 
+
+    print(f"silhouette_avg: {silhouette_avg}")
+    print(f"davies_bouldin_score: {davies_bouldin_metric}")
+    print(f"calinski_harabasz_score: {calinski_harabasz_metric}")
+    print(f"mutual_info_score: {mutual_info_metric}")
+    print(f"adjuster_rand_score: {adjusted_rand_metric}")
     return np.mean(scalable_silhouette_samples(
         X, labels, metric=metric, n_jobs=n_jobs, **kwds))
 

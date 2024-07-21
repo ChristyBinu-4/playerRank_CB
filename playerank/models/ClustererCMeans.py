@@ -6,18 +6,15 @@ import matplotlib.pyplot as plt
 from scipy.spatial.distance import euclidean
 from sklearn.metrics import silhouette_score, silhouette_samples
 from sklearn.metrics import davies_bouldin_score, calinski_harabasz_score
-from sklearn.metrics import adjusted_rand_score
 
 def calculate_silhouette_score(data, cluster_membership):
     # Calculate and print the average silhouette score for each cluster
     silhouette_avg = silhouette_score(data, cluster_membership)
     davies_bouldin_metric = davies_bouldin_score(data, cluster_membership)
     calinski_harabasz_metric = calinski_harabasz_score(data, cluster_membership)
-    adjusted_rand_metric = adjusted_rand_score(data, cluster_membership)
 
     print(f"davies_bouldin_score: {davies_bouldin_metric}")
     print(f"calinski_harabasz_score: {calinski_harabasz_metric}")
-    print(f"adjuster_rand_score: {adjusted_rand_metric}")
     return silhouette_avg
 
 class Clusterer(BaseEstimator, ClusterMixin):

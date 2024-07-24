@@ -103,7 +103,11 @@ class Weighter(BaseEstimator):
         self.feature_names_ = dataframe.loc[:, dataframe.columns != target].columns
         self.clf_ = LinearSVC(fit_intercept=True, dual = False,  max_iter = 100000,random_state=self.random_state_, class_weight='balanced')
 
-        f1_score = np.mean(cross_val_score(self.clf_, X, y, cv=2, scoring='f1_weighted'))
+        f1_score = np.mean(cross_val_score(self.clf_, X, y, cv=5, scoring='f1_weighted'))
+        
+        self.accuracy = np.mean(cross_val_score(self.clf_, X, y, cv=5, scoring="accuracy"))
+        self.precision = np.mean(cross_val_score(self.clf_, X, y, cv=5, scoring="precision"))
+        self.recall = np.mean(cross_val_score(self.clf_, X, y, cv=5, scoring="recall"))
         self.f1_score_ = f1_score
 
         self.clf_.fit(X, y)
